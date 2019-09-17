@@ -1,16 +1,81 @@
-// alert("Hello from your Chrome extension!")
-var str = "Konscience for Facebook on Chrome";
-var hitsCounterThreshold = 20;
-console.log(str);
-// var firstHref = $("a[href^='http']").eq(0).attr("href");
-// console.log(firstHref);
-function saveText(filename, text) {
-    var tempElem = document.createElement('a');
-    tempElem.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-    tempElem.setAttribute('download', filename);
-    tempElem.click();
+var initLog = "Activating 'Konscience for Facebook on Chrome'";
+console.log(initLog);
+
+/* Set all global @params here:*/
+var hitsCounterThreshold = 5; //Recommended:5
+var XPathToProfiles = "//*/tr/td[2]/div/div[2]/div/div/a";
+var initDelayInMilliseconds = 5000; //Recommended:5000
+var scrollDelayInMilliSeconds = 1000; //Recommended:1000
+var scrollMagnitude = 1000; //Recommended:1000
+
+chrome.runtime.onMessage.addListener(
+    function (request, sender, sendResponse) {
+        if (request.message === "clicked_browser_action") {
+            // var firstHref = $("a[href^='http']").eq(0).attr("href");
+            issueAlert("Redirecting to target page. Click 'OK' to proceed.");
+            var currentHref = window.location.href;
+            var relativePathToPage = "settings/?tab=people_and_other_pages";
+            var targetHref = currentHref.concat(relativePathToPage);
+            //https://www.facebook.com/<pageID>/settings/?tab=people_and_other_pages
+            console.log("Attempting to load page: " + targetHref);
+            chrome.runtime.sendMessage({ "message": "open_new_tab", "url": likesHref });
+        }
+    }
+);
+
+chrome.runtime.onMessage.addListener(
+    function (request, sender, sendResponse) {
+        if (request.message === "opened_new_tab") {
+            console.log("New Tab was opened.")
+            scrollTillEnd(false);
+        }
+    }
+);
+
+function scrollTillEnd(flag) {
+    var x = 1, y = -1;
+    var hitsCounter = 0;
+    if (!flag) {
+        setTimeout(function () {
+            scrollTillEnd(true);
+        }, initDelayInMilliseconds);
+        return;
+    }
+    time = setInterval(function () {
+        x = document.documentElement.scrollTop;
+        document.documentElement.scrollTop += scrollMagnitude;
+        y = document.documentElement.scrollTop;
+        if (x == y) {
+            hitsCounter += 1;
+            if (hitsCounter > hitsCounterThreshold) {
+                console.log("Scrolling complete.");
+                clearInterval(time);
+                issueAlert("Page fully loaded.\nClick 'OK' to download output file contaning usernames of Followers.");
+                extractAllProfiles();
+                closeCurrentTab();
+            }
+        }
+        else {
+            hitsCounter = 0;
+        }
+    }, scrollDelayInMilliSeconds);
 }
 
+function extractAllProfiles() {
+    var extractedProfiles = []
+    let items = getElementsByXPath(XPathToProfiles);
+    var allEntries = "";
+    for (var i = 0, size = items.length; i < size; i++) {
+        // var profile = [items[i].textContent, items[i].getAttribute("href")];
+        var profileName = items[i].textContent;
+        var profileID = items[i].getAttribute("href");
+        allEntries = allEntries.concat('{ name: "' + profileName + '", ID: "' + profileID + '" }, ');
+        // extractedProfiles.push(profile)
+    }
+    console.log("Profile extraction complete.")
+    // var myStrText = JSON.stringify(entry);
+    saveText("konscience-extension-output.txt", allEntries, issueAlert);
+}
 
 function getElementsByXPath(xpath, parent) {
     let results = [];
@@ -22,98 +87,22 @@ function getElementsByXPath(xpath, parent) {
     return results;
 }
 
-
-function extractAllProfiles() {
-    // const fs = require('fs');
-    var extractedProfiles = []
-    XPathToProfiles = "//*/tr/td[2]/div/div[2]/div/div/a";
-    let items = getElementsByXPath(XPathToProfiles);
-    var entry = "";
-    // var os = require('os');
-    for (var i = 0, size = items.length; i < size; i++) {
-        // var profile = [items[i].textContent, items[i].getAttribute("href")];
-        var profileName = items[i].textContent;
-        var profileID = items[i].getAttribute("href");
-        entry = entry.concat(profileName, ',', profileID, ';');
-        // fs.writeFile('Output.txt', entry, (err) => {
-        //     if(err) throw err;
-        // });
-        // extractedProfiles.push(profile)
-        // alert(profileName);
-    }
-    var myStrText = JSON.stringify(entry);
-    saveText("konscience-extension-output.txt", myStrText);
+function saveText(filename, text, whenDone) {
+    var tempElem = document.createElement('a');
+    tempElem.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    tempElem.setAttribute('download', filename);
+    tempElem.click();
+    console.log("Download attempt complete.")
+    var raiseAlert = "Click 'OK' to close this Window."
+    whenDone(raiseAlert);
 }
 
-
-
-
-
-
-
-
-
-function scrollTillEnd(flag) {
-    var x = 1, y = -1;
-    var delayInMilliseconds = 5000; //1 second
-    var hitsCounter = 0;
-    if (!flag) {
-        setTimeout(function () {
-            // alert("Set TimeOut!");/100006864103999
-            scrollTillEnd(true);
-        }, delayInMilliseconds);
-        return;
-    }
-
-    time = setInterval(function () {
-        x = document.documentElement.scrollTop;
-        document.documentElement.scrollTop += 1000;
-        y = document.documentElement.scrollTop;
-        if (x == y) {
-            hitsCounter += 1;
-            if (hitsCounter > hitsCounterThreshold) {
-                console.log("again clearing time");
-                clearInterval(time);
-                alert("All Followers accessed.\nPopulating Records...");
-                extractAllProfiles();
-            }
-        }
-        else {
-            hitsCounter = 0;
-        }
-        // alert('second hello');
-    }, 1000);
-
+function closeCurrentTab() {
+    console.log("Tab termination message issued.")
+    chrome.runtime.sendMessage({ "message": "close_current_tab" });
 }
 
-chrome.runtime.onMessage.addListener(
-    function (request, sender, sendResponse) {
-        if (request.message === "clicked_browser_action") {
-            // var firstHref = $("a[href^='http']").eq(0).attr("href");
-            // var firstHref = $("a[data-tab-key='friends']").eq(0).attr("href");
-            alert("first!");
-            var currentHref = window.location.href;
-            var relativePathToPage = "settings/?tab=people_and_other_pages";
-            var likesHref = currentHref.concat(relativePathToPage); //https://www.facebook.com/konscienceAI/settings/?tab=people_and_other_pages
-            console.log(likesHref);
-            chrome.runtime.sendMessage({ "message": "open_new_tab", "url": likesHref });
-        }
-        // else if (request.message === "opened_new_tab") {
-        //     console.log("hello!hello!")
-        //     alert("hello!")
-
-
-        // }
-    }
-);
-
-chrome.runtime.onMessage.addListener(
-    function (request, sender, sendResponse) {
-        if (request.message === "opened_new_tab") {
-            console.log("hello!hello!")
-            scrollTillEnd(false);
-            // alert("second hello!")
-
-        }
-    }
-);
+function issueAlert(msg) {
+    console.log("RaisedAlert: " + msg)
+    alert(msg);
+}

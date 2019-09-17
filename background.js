@@ -8,7 +8,7 @@ chrome.browserAction.onClicked.addListener(function (tab) {
     // Send a message to the active tab
     // chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     //     var activeTab = tabs[0];
-        chrome.tabs.sendMessage(tab.id, { "message": "clicked_browser_action" });
+    chrome.tabs.sendMessage(tab.id, { "message": "clicked_browser_action" });
     // });
 });
 
@@ -42,9 +42,9 @@ chrome.runtime.onMessage.addListener(
                 // chrome.tabs.sendMessage(tab.id, {"message": "opened_new_tab"});
                 // chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
                 //     var activeTab = tabs[0];
-                    // chrome.tabs.sendMessage(tab.id, { "message": "opened_new_tab" });
+                // chrome.tabs.sendMessage(tab.id, { "message": "opened_new_tab" });
                 // });
-                chrome.tabs.executeScript(tab.id, {file:"content.js"}, function() {
+                chrome.tabs.executeScript(tab.id, { file: "content.js" }, function () {
                     chrome.tabs.sendMessage(tab.id, { "message": "opened_new_tab" });
                 });
 
@@ -69,3 +69,17 @@ chrome.runtime.onMessage.addListener(
         }
     }
 );
+
+chrome.runtime.onMessage.addListener(
+    function (request, sender, sendResponse) {
+        if (request.message === "close_current_tab") {
+            // chrome.tabs.getCurrent(function (tab) {
+            //     chrome.tabs.remove(tab.id, function () { });
+            // });
+            chrome.tabs.getSelected(null, function (tab) {
+                chrome.tabs.remove(tab.id);
+            });
+        }
+    }
+);
+
