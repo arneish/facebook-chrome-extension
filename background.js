@@ -1,7 +1,9 @@
+//To detect browserAction
 chrome.browserAction.onClicked.addListener(function (tab) {
     chrome.tabs.sendMessage(tab.id, { "message": "clicked_browser_action" });
 });
 
+//To issue message to begin scrolling
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         if (request.message === "open_new_tab") {
@@ -15,6 +17,7 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
+//To kill new Tab
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         if (request.message === "close_current_tab") {
